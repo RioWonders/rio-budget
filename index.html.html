@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rio's Budget Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F3EE;
+    --warm-white: #FDF9F5;
+    --bark: #8B6F5E;
+    --bark-light: #C4A99A;
+    --bark-dark: #5C4A3D;
+    --sage: #7A9E7E;
+    --sage-light: #B8D4BB;
+    --sage-pale: #E8F2E9;
+    --blush: #E8A0A0;
+    --blush-light: #F5CECE;
+    --blush-pale: #FDF0F0;
+    --moss: #5C7A5F;
+    --sand: #D4B896;
+    --sand-light: #EDD9C6;
+    --terracotta: #C47A5A;
+    --parchment: #EDE0D0;
+    --text-dark: #3D2E26;
+    --text-mid: #7A6358;
+    --text-light: #A8937F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; }
+
+  /* AUTH SCREEN */
+  #authScreen {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem; text-align: center;
+  }
+  .auth-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem; font-weight: 500;
+    color: var(--bark-dark); margin-bottom: 0.5rem;
+  }
+  .auth-sub {
+    font-size: 0.85rem; color: var(--text-light);
+    margin-bottom: 2.5rem; letter-spacing: 0.04em;
+  }
+  .auth-card {
+    background: var(--warm-white);
+    border: 1px solid var(--parchment);
+    border-radius: 20px;
+    padding: 2rem 2rem;
+    max-width: 320px; width: 100%;
+  }
+  .auth-card p {
+    font-size: 0.85rem; color: var(--text-mid);
+    line-height: 1.6; margin-bottom: 1.5rem;
+  }
+  .btn-google {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 12px 16px;
+    background: var(--bark-dark); color: var(--sand-light);
+    border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-google:hover { background: var(--bark); }
+  .auth-note { font-size: 0.72rem; color: var(--text-light); margin-top: 1rem; line-height: 1.5; }
+
+  /* SYNC STATUS BAR */
+  #syncBar {
+    display: none;
+    align-items: center; justify-content: space-between;
+    padding: 6px 1.25rem;
+    background: var(--sage-pale);
+    border-bottom: 1px solid var(--sage-light);
+    font-size: 0.72rem; color: var(--moss);
+  }
+  #syncBar.error { background: var(--blush-pale); border-color: var(--blush-light); color: var(--terracotta); }
+  #syncBar.show { display: flex; }
+  .sync-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--sage); margin-right: 6px;
+    display: inline-block;
+  }
+  .sync-dot.error { background: var(--terracotta); }
+  .sync-dot.spinning {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* HEADER */
+  .app-header {
+    background: var(--bark-dark);
+    padding: 1.5rem 1.25rem 2rem;
+    position: relative; overflow: hidden;
+  }
+  .app-header::before {
+    content: ''; position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    pointer-events: none;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; }
+  .app-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 500; color: var(--sand-light); }
+  .app-subtitle { font-size: 0.72rem; color: var(--bark-light); margin-top: 2px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; position: relative; z-index: 10; }
+  .week-nav { display: flex; align-items: center; gap: 8px; }
+  .week-nav span { font-size: 0.75rem; color: var(--sand-light); white-space: nowrap; }
+  .nav-btn {
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.12); color: var(--sand-light);
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.22); }
+  .sign-out-btn {
+    font-size: 0.68rem; color: var(--bark-light); background: none; border: none;
+    cursor: pointer; text-decoration: underline; padding: 0;
+  }
+  .sign-out-btn:hover { color: var(--sand-light); }
+  .header-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .hmetric { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.75rem; }
+  .hmetric-label { font-size: 0.68rem; color: var(--bark-light); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+  .hmetric-value { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 500; color: var(--warm-white); }
+  .hmetric-value.positive { color: var(--sage-light); }
+  .hmetric-value.negative { color: var(--blush-light); }
+  .total-spend-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; margin: 0.75rem 0 0.3rem; }
+  .total-spend-fill { height: 100%; border-radius: 99px; transition: width 0.4s, background 0.3s; }
+  .total-spend-label { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--bark-light); }
+
+  /* MAIN */
+  #appScreen { display: none; }
+  .main { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+  .card { background: var(--warm-white); border-radius: 18px; padding: 1.1rem 1.1rem; border: 1px solid var(--parchment); }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 500; color: var(--bark-dark); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px; }
+  .card-title-icon { width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .icon-sage { background: var(--sage-pale); }
+  .icon-blush { background: var(--blush-pale); }
+  .icon-sand { background: var(--sand-light); }
+
+  /* SAVINGS */
+  .savings-goal-info { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem; }
+  .goal-name { font-size: 0.8rem; color: var(--text-mid); }
+  .goal-amounts { font-size: 0.8rem; color: var(--text-mid); }
+  .goal-amounts strong { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--bark-dark); }
+  .progress-track { height: 10px; background: var(--parchment); border-radius: 99px; overflow: hidden; margin-bottom: 0.4rem; }
+  .progress-fill { height: 100%; border-radius: 99px; background: var(--sage); transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+  .progress-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-light); }
+  .goal-input-row { display: flex; gap: 6px; margin-top: 0.85rem; flex-wrap: wrap; }
+  .goal-input-row input { flex: 1; min-width: 80px; padding: 7px 10px; border: 1px solid var(--parchment); border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; background: var(--cream); color: var(--text-dark); outline: none; }
+  .goal-input-row input:focus { border-color: var(--sage); }
+
+  /* BUTTONS */
+  .btn { padding: 7px 14px; border-radius: 9px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 500; transition: all 0.15s; white-space: nowrap; }
+  .btn-sage { background: var(--sage); color: white; }
+  .btn-sage:hover { background: var(--moss); }
+  .btn-blush { background: var(--blush-pale); color: var(--terracotta); border: 1px solid var(--blush-light); }
+  .btn-blush:hover { background: var(--blush-light); }
+  .btn-sand { background: var(--sand-light); color: var(--bark-dark); }
+  .btn-sand:hover { background: var(--sand); }
+  .btn-outline { background: transparent; color: var(--text-mid); border: 1px solid var(--parchment); }
+  .btn-outline:hover { background: var(--cream); }
+
+  /* TABS */
+  .tab-row { display: flex; gap: 4px; background: var(--cream); border-radius: 10px; padding: 3px; margin-bottom: 0.85rem; }
+  .tab { flex: 1; text-align: center; padding: 6px; border-radius: 8px; font-size: 0.78rem; color: var(--text-light); cursor: pointer; border: none; background: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .tab.active { background: var(--warm-white); color: var(--bark-dark); font-weight: 500; border: 1px solid var(--parchment); }
+
+  /* FORM */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .form-section-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-light); font-weight: 500; margin-bottom: 0.4rem; }
+  .income-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 0.65rem; }
+  .income-chip { background: var(--sage-pale); border: 1px solid var(--sage-light); border-radius: 20px; padding: 3px 10px; font-size: 0.73rem; color: var(--moss); cursor: pointer; transition: all 0.1s; }
+  .income-chip:hover { background: var(--sage-light); }
+  .income-chip.selected { background: var(--sage); color: white; border-color: var(--sage); }
+  .form-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .form-row input, .form-row select { padding: 7px 10px; border: 1px solid var(--parchment); border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; background: var(--cream); color: var(--text-dark); outline: none; flex: 1; min-width: 70px; }
+  .form-row input:focus, .form-row select:focus { border-color: var(--sage); }
+
+  /* CATEGORIES */
+  .cat-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--cream); }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .cat-name-wrap { flex: 1; min-width: 0; }
+  .cat-name { font-size: 0.8rem; color: var(--text-dark); }
+  .cat-sub { font-size: 0.68rem; color: var(--text-light); margin-top: 1px; }
+  .cat-bar-wrap { width: 60px; }
+  .cat-bar-bg { height: 4px; background: var(--parchment); border-radius: 99px; overflow: hidden; }
+  .cat-bar-fill { height: 4px; border-radius: 99px; transition: width 0.3s; }
+  .cat-amount { font-size: 0.78rem; font-weight: 500; color: var(--text-mid); text-align: right; min-width: 38px; }
+
+  /* LOG */
+  .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--cream); font-size: 0.8rem; }
+  .log-item:last-child { border-bottom: none; }
+  .log-item-left { display: flex; align-items: center; gap: 7px; }
+  .log-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .log-desc { color: var(--text-dark); }
+  .log-cat { color: var(--text-light); font-size: 0.7rem; }
+  .log-right { display: flex; align-items: center; gap: 7px; }
+  .log-amt { font-weight: 500; }
+  .log-del { background: none; border: none; cursor: pointer; color: var(--text-light); font-size: 13px; padding: 2px 3px; border-radius: 4px; }
+  .log-del:hover { color: var(--terracotta); }
+
+  /* STREAK */
+  .streak-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 0.65rem; }
+  .streak-day { aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 500; color: var(--text-light); background: var(--cream); border: 1px solid var(--parchment); }
+  .streak-day.on-budget { background: var(--sage-pale); border-color: var(--sage-light); color: var(--moss); }
+  .streak-day.over-budget { background: var(--blush-pale); border-color: var(--blush); color: var(--terracotta); }
+  .streak-day.today { border-width: 2px; border-color: var(--bark); font-weight: 600; }
+  .streak-legend { display: flex; gap: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.68rem; color: var(--text-light); }
+  .legend-swatch { width: 9px; height: 9px; border-radius: 2px; border: 1px solid transparent; }
+
+  /* COPY SUMMARY */
+  .copy-summary-area { background: var(--cream); border: 1px solid var(--parchment); border-radius: 10px; padding: 0.85rem; font-size: 0.78rem; color: var(--text-mid); line-height: 1.7; white-space: pre-wrap; font-family: 'DM Sans', sans-serif; min-height: 60px; }
+  .copy-row { display: flex; justify-content: flex-end; gap: 7px; margin-top: 0.65rem; align-items: center; }
+  .copy-feedback { font-size: 0.75rem; color: var(--sage); opacity: 0; transition: opacity 0.3s; }
+  .copy-feedback.show { opacity: 1; }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--cream);
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-emoji { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+  .breakdown-name { flex: 1; font-size: 0.82rem; color: var(--text-dark); }
+  .breakdown-pct { font-size: 0.72rem; color: var(--text-light); min-width: 32px; text-align: right; }
+  .breakdown-bar-wrap { width: 55px; }
+  .breakdown-bar-bg { height: 4px; background: var(--parchment); border-radius: 99px; overflow: hidden; }
+  .breakdown-bar-fill { height: 4px; border-radius: 99px; }
+  .breakdown-amt { font-size: 0.82rem; font-weight: 500; color: var(--bark-dark); min-width: 38px; text-align: right; }
+  .breakdown-spent { font-size: 0.7rem; color: var(--text-light); min-width: 50px; text-align: right; }
+
+
+  /* EDITABLE CHIPS */
+  .chips-edit-btn { font-size:0.68rem; color:var(--text-light); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; margin-left:auto; }
+  .chips-edit-btn:hover { color:var(--bark); }
+  .chip-edit-row { display:flex; gap:5px; align-items:center; padding:5px 0; border-bottom:1px solid var(--cream); }
+  .chip-edit-row:last-child { border-bottom:none; }
+  .chip-edit-row input { flex:1; padding:5px 8px; border:1px solid var(--parchment); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.78rem; background:var(--cream); color:var(--text-dark); outline:none; }
+  .chip-edit-row input:focus { border-color:var(--sage); }
+  .chip-del-btn { background:none; border:none; cursor:pointer; color:var(--text-light); font-size:13px; padding:2px 4px; }
+  .chip-del-btn:hover { color:var(--terracotta); }
+  .chip-edit-panel { display:none; background:var(--cream); border-radius:10px; padding:0.75rem; margin-bottom:0.65rem; border:1px solid var(--parchment); }
+  .chip-edit-panel.open { display:block; }
+
+  /* PAYDAY CHECKLIST */
+  .checklist-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--cream); }
+  .checklist-item:last-child { border-bottom:none; }
+  .checklist-cb { width:18px; height:18px; border-radius:5px; border:1.5px solid var(--sage); background:var(--cream); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .checklist-cb.checked { background:var(--sage); border-color:var(--sage); }
+  .checklist-cb.checked::after { content:'✓'; color:white; font-size:11px; font-weight:600; }
+  .checklist-label { flex:1; font-size:0.82rem; color:var(--text-dark); }
+  .checklist-label.done { text-decoration:line-through; color:var(--text-light); }
+  .checklist-amt { font-size:0.82rem; font-weight:500; color:var(--bark-dark); }
+  .payday-progress { height:6px; background:var(--parchment); border-radius:99px; overflow:hidden; margin:0.75rem 0 0.4rem; }
+  .payday-progress-fill { height:100%; border-radius:99px; background:var(--sage); transition:width 0.4s; }
+
+  /* ROLLING INCOME */
+  .rolling-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:0.85rem; }
+  .rolling-week { background:var(--cream); border-radius:10px; padding:0.65rem 0.5rem; text-align:center; border:1px solid var(--parchment); }
+  .rolling-week.current { border-color:var(--sage-light); background:var(--sage-pale); }
+  .rolling-week-label { font-size:0.65rem; color:var(--text-light); margin-bottom:3px; }
+  .rolling-week-amt { font-family:'Playfair Display',serif; font-size:0.95rem; color:var(--bark-dark); }
+  .rolling-avg-row { display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-top:1px solid var(--parchment); }
+
+  /* CAN I AFFORD */
+  .afford-result { margin-top:0.75rem; padding:0.75rem; border-radius:10px; font-size:0.82rem; line-height:1.6; display:none; }
+  .afford-result.yes { background:var(--sage-pale); border:1px solid var(--sage-light); color:var(--moss); }
+  .afford-result.no { background:var(--blush-pale); border:1px solid var(--blush-light); color:var(--terracotta); }
+  .afford-result.show { display:block; }
+
+  /* NOTE FIELD */
+  .log-note { font-size:0.68rem; color:var(--text-light); font-style:italic; margin-top:1px; }
+
+  .empty-state { text-align: center; padding: 1.25rem 0; color: var(--text-light); font-size: 0.8rem; }
+
+  /* LOADING */
+  #loadingScreen {
+    display: none; min-height: 100vh;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 1rem;
+  }
+  #loadingScreen.show { display: flex; }
+  .loader {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid var(--parchment);
+    border-top-color: var(--sage);
+    animation: spin 0.8s linear infinite;
+  }
+  .loader-text { font-size: 0.82rem; color: var(--text-light); }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="auth-logo">Rio's Budget</div>
+  <div class="auth-sub">Weekly tracker · Google Sheets sync</div>
+  <div class="auth-card">
+    <p>Sign in with Google to sync your budget data across all your devices via Google Sheets. A spreadsheet will be created automatically in your Drive.</p>
+    <button class="btn-google" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M9 3.48c1.69 0 2.83.73 3.48 1.34l2.54-2.48C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l2.91 2.26C4.6 5.05 6.62 3.48 9 3.48z"/><path fill="#fff" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#fff" d="M3.88 10.78A5.54 5.54 0 0 1 3.58 9c0-.62.11-1.22.29-1.78L.96 4.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.04l2.92-2.26z"/><path fill="#fff" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.4-1.57-5.12-3.74L.97 13.04C2.45 15.98 5.48 18 9 18z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="auth-note">Your data is stored in your own Google Drive. This app never stores your information on external servers.</div>
+  </div>
+</div>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen">
+  <div class="loader"></div>
+  <div class="loader-text" id="loadingText">Connecting to Google Sheets…</div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="appScreen">
+  <div id="syncBar">
+    <span><span class="sync-dot" id="syncDot"></span><span id="syncMsg">Synced</span></span>
+    <span id="syncTime"></span>
+  </div>
+
+  <div class="app-header">
+    <div class="header-top">
+      <div>
+        <div class="app-title">Rio's Budget</div>
+        <div class="app-subtitle">Weekly tracker</div>
+      </div>
+      <div class="header-right">
+        <div class="week-nav">
+          <button class="nav-btn" id="prevWeekBtn" onclick="changeWeek(-1)">‹</button>
+          <span id="weekLabel">—</span>
+          <button class="nav-btn" id="nextWeekBtn" onclick="changeWeek(1)">›</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="sign-out-btn" onclick="refreshData()">↻ Refresh</button>
+          <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+    </div>
+    <div class="header-metrics">
+      <div class="hmetric"><div class="hmetric-label">Income</div><div class="hmetric-value positive" id="summIncome">$0</div></div>
+      <div class="hmetric"><div class="hmetric-label">Spent</div><div class="hmetric-value" id="summSpent">$0</div></div>
+      <div class="hmetric"><div class="hmetric-label">Left</div><div class="hmetric-value" id="summLeft">$0</div></div>
+    </div>
+    <div class="total-spend-bar"><div class="total-spend-fill" id="totalSpendBar" style="width:0%"></div></div>
+    <div class="total-spend-label"><span id="totalSpendPct">0% of income spent</span><span id="totalSpendNote"></span></div>
+  </div>
+
+  <div class="main">
+
+    <!-- Accounts Overview -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-sand">🏦</div>My accounts</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;">
+        <div style="background:var(--sage-pale);border:1px solid var(--sage-light);border-radius:12px;padding:0.85rem;">
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--moss);margin-bottom:4px;">Checking</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--bark-dark);" id="checkingBal">$0</div>
+          <div style="font-size:0.7rem;color:var(--text-light);margin-top:3px;">Day-to-day spending</div>
+        </div>
+        <div style="background:var(--blush-pale);border:1px solid var(--blush-light);border-radius:12px;padding:0.85rem;">
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--terracotta);margin-bottom:4px;">Savings</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--bark-dark);" id="savingsBal">$0</div>
+          <div style="font-size:0.7rem;color:var(--text-light);margin-top:3px;">Car + emergency fund</div>
+        </div>
+      </div>
+      <div class="form-section-label">Transfer to savings</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <input type="number" id="transferAmt" placeholder="Amount $" min="0" style="flex:1;padding:7px 10px;border:1px solid var(--parchment);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:0.82rem;background:var(--cream);color:var(--text-dark);outline:none;">
+        <select id="transferDest" style="flex:1.5;padding:7px 10px;border:1px solid var(--parchment);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:0.82rem;background:var(--cream);color:var(--text-dark);outline:none;">
+          <option value="car">→ Car fund</option>
+          <option value="emergency">→ Emergency fund</option>
+        </select>
+        <button class="btn btn-sage" onclick="transferToSavings()">Transfer</button>
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.7rem;color:var(--text-light);">Transferring moves money from checking to savings in the tracker.</div>
+    </div>
+
+    <!-- Checking Breakdown -->
+    <div class="card" id="checkingBreakdownCard">
+      <div class="card-title"><div class="card-title-icon icon-sage">💳</div>How to spend your checking</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.25rem;">
+        <span style="font-size:0.82rem;color:var(--text-mid);">Available in checking</span>
+        <span style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--bark-dark);" id="checkingAvail">$0</span>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text-light);margin-bottom:1rem;" id="checkingSubtitle">Based on this week's income</div>
+      <div id="breakdownList"></div>
+      <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--parchment);display:flex;justify-content:space-between;font-size:0.8rem;">
+        <span style="color:var(--text-mid);">Unallocated</span>
+        <span style="font-weight:500;color:var(--bark-dark);" id="unallocated">$0</span>
+      </div>
+    </div>
+
+    <!-- Savings Goals -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-sage">🌱</div>Savings goals</div>
+      <div style="margin-bottom:1rem;">
+        <div class="savings-goal-info">
+          <span class="goal-name">🚗 Car payment fund</span>
+          <span class="goal-amounts"><strong id="savedAmt">$0</strong> of <strong id="goalAmt">$200</strong></span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="savingsBar" style="width:0%;background:var(--sage);"></div></div>
+        <div class="progress-labels"><span id="savingsPct">0% of goal</span><span id="carMonthsLeft"></span></div>
+      </div>
+      <div style="margin-bottom:0.5rem;">
+        <div class="savings-goal-info" style="margin-bottom:0.5rem;">
+          <span class="goal-name">🛡 Emergency fund</span>
+          <span class="goal-amounts"><strong id="emergencyAmt">$0</strong> of <strong>$500</strong></span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="emergencyBar" style="width:0%;background:var(--blush);"></div></div>
+        <div class="progress-labels"><span id="emergencyPct">0% of goal</span><span id="emergencyMonthsLeft"></span></div>
+      </div>
+    </div>
+
+
+    <!-- Payday Checklist -->
+    <div class="card" id="paydayCard">
+      <div class="card-title"><div class="card-title-icon icon-sage">✅</div>Payday checklist</div>
+      <div style="font-size:0.75rem;color:var(--text-light);margin-bottom:0.85rem;" id="paydaySubtitle">Log income first to activate your checklist</div>
+      <div id="checklistItems"></div>
+      <div class="payday-progress"><div class="payday-progress-fill" id="paydayProgressFill" style="width:0%"></div></div>
+      <div style="font-size:0.7rem;color:var(--text-light);display:flex;justify-content:space-between;">
+        <span id="paydayProgressLabel">0 of 5 done</span>
+        <span id="paydayDoneMsg" style="color:var(--moss);font-weight:500;"></span>
+      </div>
+    </div>
+
+    <!-- Rolling Income Average -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-sand">📈</div>Income trend</div>
+      <div class="rolling-grid" id="rollingGrid"></div>
+      <div class="rolling-avg-row">
+        <span style="font-size:0.82rem;color:var(--text-mid);">4-week average</span>
+        <span style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--bark-dark);" id="rollingAvg">$—</span>
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-light);margin-top:4px;" id="rollingNote"></div>
+    </div>
+
+    <!-- Can I Afford This -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-blush">🤔</div>Can I afford this?</div>
+      <div style="font-size:0.78rem;color:var(--text-mid);margin-bottom:0.75rem;">Enter a purchase amount to see if it fits your budget.</div>
+      <div class="form-row">
+        <input type="number" id="affordAmt" placeholder="Purchase amount $" min="0" style="flex:2;">
+        <select id="affordCat" style="flex:1.5;">
+          <option value="Food & dining">Food & dining</option>
+          <option value="Gas">Gas</option>
+          <option value="Personal">Personal</option>
+          <option value="Other">Other / one-time</option>
+        </select>
+        <button class="btn btn-outline" onclick="checkAfford()">Check</button>
+      </div>
+      <div class="afford-result" id="affordResult"></div>
+    </div>
+
+    <!-- Log Entry -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-blush">✏️</div>Log entry</div>
+      <div class="tab-row">
+        <button class="tab active" onclick="switchTab('income')">Income</button>
+        <button class="tab" onclick="switchTab('expense')">Expense</button>
+      </div>
+      <div class="tab-panel active" id="tab-income">
+        <div style="display:flex;align-items:center;margin-bottom:0.4rem;">
+          <span class="form-section-label" style="margin-bottom:0;">Quick select</span>
+          <button class="chips-edit-btn" onclick="toggleChipEdit()">Edit</button>
+        </div>
+        <div class="chip-edit-panel" id="chipEditPanel">
+          <div id="chipEditList"></div>
+          <div style="display:flex;gap:6px;margin-top:0.65rem;">
+            <input type="text" id="newChipLabel" placeholder="Label (e.g. Babysitting)" style="flex:2;padding:5px 8px;border:1px solid var(--parchment);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.78rem;background:var(--warm-white);color:var(--text-dark);outline:none;">
+            <input type="number" id="newChipAmt" placeholder="Amount $" style="flex:1;padding:5px 8px;border:1px solid var(--parchment);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.78rem;background:var(--warm-white);color:var(--text-dark);outline:none;" min="0">
+            <button class="btn btn-sage" style="padding:5px 10px;font-size:0.75rem;" onclick="addChip()">+ Add</button>
+          </div>
+        </div>
+        <div class="income-chips" id="incomeChips"></div>
+        <div class="form-row">
+          <input type="text" id="incomeSource" placeholder="Source" style="flex:2;">
+          <input type="number" id="incomeAmt" placeholder="Amount $" min="0" style="flex:1;">
+          <button class="btn btn-sage" onclick="logIncome()">Add ↗</button>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-expense">
+        <div class="form-row">
+          <input type="text" id="expDesc" placeholder="Description" style="flex:2;">
+          <select id="expCat" style="flex:1.5;">
+            <option>Food & dining</option>
+            <option>Gas</option>
+            <option>Personal</option>
+            <option>Car payment</option>
+            <option>Emergency fund</option>
+            <option>Claude subscription</option>
+            <option>Other</option>
+          </select>
+          <input type="number" id="expAmt" placeholder="$" min="0" style="flex:1;min-width:55px;">
+          <button class="btn btn-blush" onclick="logExpense()">Add ↗</button>
+        </div>
+        <div style="margin-top:6px;">
+          <input type="text" id="expNote" placeholder="Add a note (optional)" style="width:100%;padding:6px 10px;border:1px solid var(--parchment);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:0.78rem;background:var(--cream);color:var(--text-dark);outline:none;">
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Log -->
+    <div class="card" id="logCard" style="display:none;">
+      <div class="card-title"><div class="card-title-icon icon-blush">🧾</div>This week's log</div>
+      <div id="logList"></div>
+    </div>
+
+    <!-- Streak -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-sage">🗓</div>4-week streak</div>
+      <div class="streak-grid" id="streakGrid"></div>
+      <div class="streak-legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--sage-pale);border-color:var(--sage);"></div>On budget</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blush-pale);border-color:var(--blush);"></div>Over budget</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--cream);border-color:var(--parchment);"></div>No data</div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card">
+      <div class="card-title"><div class="card-title-icon icon-sand">📋</div>Copy my budget summary</div>
+      <div class="copy-summary-area" id="summaryText"></div>
+      <div class="copy-row">
+        <span class="copy-feedback" id="copyFeedback">Copied!</span>
+        <button class="btn btn-outline" onclick="generateSummary()">Refresh</button>
+        <button class="btn btn-sand" onclick="copySummary()">Copy summary</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CLIENT_ID = '714262486158-9gpqk9krtn15l78ujl8rqv5r4p9qlnb1.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const SHEET_NAME_KEY = 'rio_sheet_id';
+const HARDCODED_SHEET_ID = '1G_tLfG6x3td1sqirgMEt6w_to-iceS4DOUMAg8slTWQ';
+
+const WEEKLY_BUDGETS = {
+  'Food & dining': 35, 'Gas': 17, 'Personal': 23,
+  'Car payment': 46, 'Emergency fund': 23, 'Claude subscription': 5, 'Other': 20
+};
+const CAT_COLORS = {
+  'Food & dining': '#7A9E7E', 'Gas': '#C4A99A', 'Personal': '#E8A0A0',
+  'Car payment': '#378ADD', 'Emergency fund': '#1D9E75', 'Claude subscription': '#8B6F5E', 'Other': '#B4B2A9'
+};
+
+let tokenClient, accessToken = null;
+let weekOffset = 0;
+let appData = { weeks: {}, savings: { car: 0, emergency: 0 }, goalCar: 200 };
+let spreadsheetId = HARDCODED_SHEET_ID || localStorage.getItem(SHEET_NAME_KEY) || null;
+let syncTimeout = null;
+
+function showScreen(name) {
+  document.getElementById('authScreen').style.display = name === 'auth' ? 'flex' : 'none';
+  document.getElementById('loadingScreen').classList.toggle('show', name === 'loading');
+  document.getElementById('appScreen').style.display = name === 'app' ? 'block' : 'none';
+}
+
+function setLoading(msg) {
+  document.getElementById('loadingText').textContent = msg;
+  showScreen('loading');
+}
+
+function signIn() {
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  spreadsheetId = null;
+  localStorage.removeItem(SHEET_NAME_KEY);
+  localStorage.removeItem('rio_user_hint');
+  appData = { weeks: {}, savings: { car: 0, emergency: 0 }, goalCar: 200 };
+  showScreen('auth');
+}
+
+async function onTokenReceived(resp) {
+  if (resp.error) {
+    showScreen('auth');
+    return;
+  }
+  accessToken = resp.access_token;
+  spreadsheetId = HARDCODED_SHEET_ID;
+  localStorage.setItem(SHEET_NAME_KEY, spreadsheetId);
+
+  // Get user email and store for silent re-auth on reload
+  try {
+    const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    }).then(r => r.json());
+    if (userInfo.email) localStorage.setItem('rio_user_hint', userInfo.email);
+  } catch(e) {}
+
+  setLoading('Loading your budget data…');
+  try {
+    await loadFromSheet();
+    showScreen('app');
+    render();
+    showSyncBar('Synced with Google Sheets ✓', false);
+  } catch(e) {
+    console.error('Load error:', e);
+    showScreen('auth');
+  }
+}
+
+async function sheetsRequest(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets' + path, opts);
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error('Sheets API error:', res.status, errText);
+    throw new Error('Sheets API ' + res.status + ': ' + errText);
+  }
+  return res.json();
+}
+
+async function createSpreadsheet() {
+  const data = await sheetsRequest('', 'POST', {
+    properties: { title: "Rio's Budget Tracker" },
+    sheets: [
+      { properties: { title: 'Entries' } },
+      { properties: { title: 'Savings' } }
+    ]
+  });
+  spreadsheetId = data.spreadsheetId;
+  localStorage.setItem(SHEET_NAME_KEY, spreadsheetId);
+  await sheetsRequest(`/${spreadsheetId}/values/Entries!A1:E1`, 'PUT', {
+    range: 'Entries!A1:E1',
+    majorDimension: 'ROWS',
+    values: [['WeekKey', 'Type', 'Source/Description', 'Category', 'Amount']]
+  });
+  await sheetsRequest(`/${spreadsheetId}/values/Savings!A1:C1`, 'PUT', {
+    range: 'Savings!A1:C1',
+    majorDimension: 'ROWS',
+    values: [['Key', 'Value', 'Updated']]
+  });
+}
+
+async function loadFromSheet() {
+  setLoading('Loading your budget data…');
+  const [entriesRes, savingsRes] = await Promise.all([
+    sheetsRequest(`/${spreadsheetId}/values/Entries!A2:E5000`),
+    sheetsRequest(`/${spreadsheetId}/values/Savings!A2:C100`)
+  ]);
+
+  appData = { weeks: {}, savings: { car: 0, emergency: 0 }, goalCar: 200 };
+
+  (entriesRes.values || []).forEach((row, i) => {
+    if (!row || row.length < 3) return;
+
+    // Find which column the date key starts at (col 0 or col 4)
+    let base = -1;
+    if (row[0] && String(row[0]).startsWith('20')) base = 0;
+    else if (row[4] && String(row[4]).startsWith('20')) base = 4;
+    if (base === -1) return;
+
+    const rawKey = String(row[base]).trim();
+    const wkKey = rawKey.includes('-W') ? isoWeekToDateKey(rawKey) : rawKey;
+    const type = String(row[base + 1] || '').trim();
+    const srcOrDesc = String(row[base + 2] || '').trim();
+
+    // Income: A=date, B=income, C=description, D=amount (no category)
+    // Expense: A=date, B=expense, C=description, D=category, E=amount
+    let cat = '', amount = 0;
+    if (type === 'income') {
+      // Amount could be col D (index base+3) or col E (index base+4)
+      amount = parseFloat(row[base + 3]) || parseFloat(row[base + 4]) || 0;
+      cat = '';
+    } else if (type === 'expense') {
+      cat = String(row[base + 3] || '').trim();
+      amount = parseFloat(row[base + 4]) || parseFloat(row[base + 3]) || 0;
+    }
+
+    if (!wkKey || !type || !amount) return;
+    if (!appData.weeks[wkKey]) appData.weeks[wkKey] = { income: [], expenses: [] };
+    if (type === 'income') {
+      appData.weeks[wkKey].income.push({ src: srcOrDesc, amt: amount, id: i + 100 });
+    } else if (type === 'expense') {
+      appData.weeks[wkKey].expenses.push({ desc: srcOrDesc, cat, amt: amount, id: i + 100 });
+    }
+  });
+
+  (savingsRes.values || []).forEach(row => {
+    const [key, val] = row;
+    if (key === 'car') appData.savings.car = parseFloat(val) || 0;
+    if (key === 'emergency') appData.savings.emergency = parseFloat(val) || 0;
+    if (key === 'goalCar') appData.goalCar = parseFloat(val) || 200;
+    if (key === 'checking') appData.checking = parseFloat(val) || 0;
+  });
+}
+
+async function saveEntryToSheet(type, wk, srcOrDesc, cat, amt) {
+  showSyncBar('Saving…', false, true);
+  try {
+    const url = `/${spreadsheetId}/values/Entries!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    await sheetsRequest(url, 'POST', {
+      majorDimension: 'ROWS',
+      values: [[wk, type, srcOrDesc, cat || '', String(amt)]]
+    });
+    showSyncBar('Saved ✓', false);
+  } catch(e) {
+    showSyncBar('Sync failed: ' + e.message.substring(0, 60), true);
+    console.error('Save failed:', e);
+  }
+}
+
+async function saveSavingsToSheet() {
+  showSyncBar('Saving…', false, true);
+  try {
+    const now = new Date().toISOString();
+    const rows = [
+      ['car', appData.savings.car, now],
+      ['emergency', appData.savings.emergency, now],
+      ['goalCar', appData.goalCar, now],
+      ['checking', appData.checking || 0, now]
+    ];
+    await sheetsRequest(`/${spreadsheetId}/values/Savings!A2:C5?valueInputOption=RAW`, 'PUT', {
+      range: 'Savings!A2:C5', majorDimension: 'ROWS', values: rows
+    });
+    showSyncBar('Saved ✓', false);
+  } catch(e) {
+    showSyncBar('Sync failed — data saved locally', true);
+  }
+}
+
+async function deleteEntryFromSheet(id, type) {
+  showSyncBar('Removing entry…', false, true);
+  try {
+    const res = await sheetsRequest(`/${spreadsheetId}/values/Entries!A2:E5000`);
+    const rows = res.values || [];
+    const sheetIdx = id - 100;
+    if (sheetIdx >= 0 && sheetIdx < rows.length) {
+      await sheetsRequest(`/${spreadsheetId}/values/Entries!A${sheetIdx+2}:E${sheetIdx+2}?valueInputOption=RAW`, 'PUT', {
+        range: `Entries!A${sheetIdx+2}:E${sheetIdx+2}`,
+        majorDimension: 'ROWS', values: [['', '', '', '', '']]
+      });
+    }
+    showSyncBar('Deleted & synced ✓', false);
+  } catch(e) {
+    showSyncBar('Sync failed', true);
+  }
+}
+
+function showSyncBar(msg, isError, spinning=false) {
+  const bar = document.getElementById('syncBar');
+  const dot = document.getElementById('syncDot');
+  bar.className = 'show' + (isError ? ' error' : '');
+  dot.className = 'sync-dot' + (isError ? ' error' : '') + (spinning ? ' spinning' : '');
+  document.getElementById('syncMsg').textContent = msg;
+  document.getElementById('syncTime').textContent = spinning ? '' : new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  clearTimeout(syncTimeout);
+  if (!spinning) syncTimeout = setTimeout(() => { bar.classList.remove('show'); }, 4000);
+}
+
+function isoWeekToDateKey(wkStr) {
+  // Convert '2026-W22' to the Sunday date string of that week
+  const [yearStr, weekStr] = wkStr.split('-W');
+  const year = parseInt(yearStr);
+  const week = parseInt(weekStr);
+  // Jan 4 is always in week 1
+  const jan4 = new Date(year, 0, 4);
+  const jan4Day = jan4.getDay();
+  // Get to Monday of week 1
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - jan4Day + 1);
+  // Get to Sunday of target week (Sunday before that Monday)
+  const targetSunday = new Date(week1Monday);
+  targetSunday.setDate(week1Monday.getDate() + (week - 1) * 7 - 1);
+  const y = targetSunday.getFullYear();
+  const m = String(targetSunday.getMonth() + 1).padStart(2, '0');
+  const d = String(targetSunday.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+
+function weekKey(offset) {
+  const now = new Date();
+  // Use Sunday-based week (simpler, matches JS getDay())
+  const startOfWeek = new Date(now);
+  startOfWeek.setHours(0,0,0,0);
+  startOfWeek.setDate(now.getDate() - now.getDay() + (offset * 7));
+  // Build a simple YYYY-MM-DD based key for the start of the week (no ISO ambiguity)
+  const y = startOfWeek.getFullYear();
+  const m = String(startOfWeek.getMonth() + 1).padStart(2, '0');
+  const d = String(startOfWeek.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+
+function weekLabel(offset) {
+  const now = new Date();
+  const sun = new Date(now);
+  sun.setHours(0,0,0,0);
+  sun.setDate(now.getDate() - now.getDay() + (offset * 7));
+  const sat = new Date(sun);
+  sat.setDate(sun.getDate() + 6);
+  const fmt = dt => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const suffix = offset === 0 ? ' · This week' : offset === -1 ? ' · Last week' : '';
+  return fmt(sun) + ' – ' + fmt(sat) + suffix;
+}
+
+function getWeek(offset) {
+  const k = weekKey(offset !== undefined ? offset : weekOffset);
+  if (!appData.weeks[k]) appData.weeks[k] = { income: [], expenses: [] };
+  return appData.weeks[k];
+}
+
+async function refreshData() {
+  setLoading('Refreshing from Google Sheets…');
+  try {
+    await loadFromSheet();
+    showScreen('app');
+    render();
+    showSyncBar('Refreshed ✓', false);
+  } catch(e) {
+    showScreen('app');
+    showSyncBar('Refresh failed', true);
+  }
+}
+
+function changeWeek(dir) {
+  weekOffset += dir;
+  // Immediately update label so user sees response
+  document.getElementById('weekLabel').textContent = weekLabel(weekOffset);
+  // Disable forward button if already 1 week ahead
+  const nextBtn = document.getElementById('nextWeekBtn');
+  const prevBtn = document.getElementById('prevWeekBtn');
+  if (nextBtn) nextBtn.style.opacity = weekOffset >= 4 ? '0.3' : '1';
+  if (prevBtn) prevBtn.style.opacity = weekOffset <= -52 ? '0.3' : '1';
+  render();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && tab === 'income') || (i === 1 && tab === 'expense')));
+  document.getElementById('tab-income').classList.toggle('active', tab === 'income');
+  document.getElementById('tab-expense').classList.toggle('active', tab === 'expense');
+}
+
+function selectIncomeSource(el, src) {
+  // Legacy - now handled by selectChip
+}
+
+async function logIncome() {
+  const src = document.getElementById('incomeSource').value.trim() || 'Income';
+  const amt = parseFloat(document.getElementById('incomeAmt').value);
+  if (!amt || amt <= 0) return;
+  const k = weekKey(weekOffset);
+  getWeek().income.push({ src, amt, id: Date.now() });
+  appData.checking = (appData.checking || 0) + amt;
+  document.getElementById('incomeAmt').value = '';
+  document.querySelectorAll('.income-chip').forEach(c => c.classList.remove('selected'));
+  render();
+  await saveEntryToSheet('income', k, src, '', amt);
+  await saveSavingsToSheet();
+}
+
+async function logExpense() {
+  const desc = document.getElementById('expDesc').value.trim() || 'Expense';
+  const cat = document.getElementById('expCat').value;
+  const amt = parseFloat(document.getElementById('expAmt').value);
+  const note = document.getElementById('expNote') ? document.getElementById('expNote').value.trim() : '';
+  if (!amt || amt <= 0) return;
+  const k = weekKey(weekOffset);
+  getWeek().expenses.push({ desc, cat, amt, note, id: Date.now() });
+  // Car payment and emergency fund come from savings, everything else from checking
+  if (cat === 'Car payment') {
+    appData.savings.car = Math.max(0, (appData.savings.car || 0) - amt);
+  } else if (cat === 'Emergency fund') {
+    appData.savings.emergency = Math.max(0, (appData.savings.emergency || 0) - amt);
+  } else {
+    appData.checking = (appData.checking || 0) - amt;
+  }
+  document.getElementById('expDesc').value = '';
+  document.getElementById('expAmt').value = '';
+  if (document.getElementById('expNote')) document.getElementById('expNote').value = '';
+  render();
+  await saveEntryToSheet('expense', k, desc, cat, amt);
+  await saveSavingsToSheet();
+}
+
+async function deleteEntry(id, type) {
+  const w = getWeek();
+  if (type === 'expense') w.expenses = w.expenses.filter(e => e.id !== id);
+  else w.income = w.income.filter(i => i.id !== id);
+  render();
+  await deleteEntryFromSheet(id, type);
+}
+
+async function transferToSavings() {
+  const amt = parseFloat(document.getElementById('transferAmt').value);
+  const dest = document.getElementById('transferDest').value;
+  if (!amt || amt <= 0) return;
+  // Move from checking to savings
+  appData.savings[dest] = (appData.savings[dest] || 0) + amt;
+  appData.checking = (appData.checking || 0) - amt;
+  document.getElementById('transferAmt').value = '';
+  render();
+  await saveSavingsToSheet();
+}
+
+async function addToSavings(type) {
+  const inputId = type === 'car' ? 'addSavingsAmt' : 'addEmergencyAmt';
+  const amt = parseFloat(document.getElementById(inputId).value);
+  if (!amt || amt <= 0) return;
+  appData.savings[type] = (appData.savings[type] || 0) + amt;
+  document.getElementById(inputId).value = '';
+  render();
+  await saveSavingsToSheet();
+}
+
+function render() {
+  document.getElementById('weekLabel').textContent = weekLabel(weekOffset);
+  // Disable forward button if already 1 week ahead
+  const nextBtn = document.getElementById('nextWeekBtn');
+  const prevBtn = document.getElementById('prevWeekBtn');
+  if (nextBtn) nextBtn.style.opacity = weekOffset >= 4 ? '0.3' : '1';
+  if (prevBtn) prevBtn.style.opacity = weekOffset <= -52 ? '0.3' : '1';
+  const w = getWeek();
+  const totalIncome = w.income.reduce((s, i) => s + i.amt, 0);
+  const totalSpent = w.expenses.reduce((s, e) => s + e.amt, 0);
+  const remaining = totalIncome - totalSpent;
+  const pct = totalIncome > 0 ? Math.min((totalSpent / totalIncome) * 100, 100) : 0;
+
+  document.getElementById('summIncome').textContent = '$' + totalIncome.toFixed(0);
+  document.getElementById('summSpent').textContent = '$' + totalSpent.toFixed(0);
+  const leftEl = document.getElementById('summLeft');
+  leftEl.textContent = (remaining < 0 ? '-$' : '$') + Math.abs(remaining).toFixed(0);
+  leftEl.className = 'hmetric-value ' + (remaining < 0 ? 'negative' : 'positive');
+
+  const bar = document.getElementById('totalSpendBar');
+  bar.style.width = pct.toFixed(0) + '%';
+  bar.style.background = pct > 90 ? '#E8A0A0' : pct > 70 ? '#D4B896' : '#7A9E7E';
+  document.getElementById('totalSpendPct').textContent = pct.toFixed(0) + '% of income spent';
+  document.getElementById('totalSpendNote').textContent = remaining < 0 ? '⚠ Over budget' : '';
+
+  const carSaved = appData.savings.car || 0;
+  const carGoal = appData.goalCar || 200;
+  const carPct = Math.min((carSaved / carGoal) * 100, 100);
+  const emergencySaved = appData.savings.emergency || 0;
+  const emergencyGoal = 500;
+  const emergencyPct = Math.min((emergencySaved / emergencyGoal) * 100, 100);
+  const totalSavings = carSaved + emergencySaved;
+  const checking = appData.checking || 0;
+
+  // Account balances
+  const checkingEl = document.getElementById('checkingBal');
+  const savingsEl = document.getElementById('savingsBal');
+  if (checkingEl) { checkingEl.textContent = '$' + checking.toFixed(0); checkingEl.style.color = checking < 0 ? 'var(--terracotta)' : 'var(--bark-dark)'; }
+  if (savingsEl) savingsEl.textContent = '$' + totalSavings.toFixed(0);
+
+  // Car goal
+  document.getElementById('savedAmt').textContent = '$' + carSaved.toFixed(0);
+  document.getElementById('goalAmt').textContent = '$' + carGoal;
+  document.getElementById('savingsBar').style.width = carPct.toFixed(0) + '%';
+  document.getElementById('savingsPct').textContent = carPct.toFixed(0) + '% of goal';
+  const carLeft = document.getElementById('carMonthsLeft');
+  if (carLeft) carLeft.textContent = carSaved >= carGoal ? '✓ Goal reached!' : '$' + (carGoal - carSaved).toFixed(0) + ' to go';
+
+  // Emergency goal
+  document.getElementById('emergencyAmt').textContent = '$' + emergencySaved.toFixed(0);
+  const emergencyBar = document.getElementById('emergencyBar');
+  if (emergencyBar) emergencyBar.style.width = emergencyPct.toFixed(0) + '%';
+  const emergencyPctEl = document.getElementById('emergencyPct');
+  if (emergencyPctEl) emergencyPctEl.textContent = emergencyPct.toFixed(0) + '% of goal';
+  const emergencyLeft = document.getElementById('emergencyMonthsLeft');
+  if (emergencyLeft) emergencyLeft.textContent = emergencySaved >= emergencyGoal ? '✓ Goal reached!' : '$' + (emergencyGoal - emergencySaved).toFixed(0) + ' to go';
+
+
+
+  const allEntries = [
+    ...w.income.map(i => ({ type: 'income', label: i.src, cat: 'Income', amt: i.amt, id: i.id })),
+    ...w.expenses.map(e => ({ type: 'expense', label: e.desc, cat: e.cat, amt: e.amt, note: e.note||'', id: e.id }))
+  ];
+  const logCard = document.getElementById('logCard');
+  if (allEntries.length > 0) {
+    logCard.style.display = 'block';
+    document.getElementById('logList').innerHTML = allEntries.map(e => `
+      <div class="log-item">
+        <div class="log-item-left">
+          <div class="log-dot" style="background:${e.type==='income'?'#7A9E7E':'#E8A0A0'};"></div>
+          <div><div class="log-desc">${e.label}</div><div class="log-cat">${e.cat}${e.note ? ' · <em>'+e.note+'</em>' : ''}</div></div>
+        </div>
+        <div class="log-right">
+          <span class="log-amt" style="color:${e.type==='income'?'var(--moss)':'var(--text-dark)'};">${e.type==='income'?'+':'-'}$${e.amt.toFixed(2)}</span>
+          <button class="log-del" onclick="deleteEntry(${e.id},'${e.type}')" aria-label="Delete">✕</button>
+        </div>
+      </div>`).join('');
+  } else { logCard.style.display = 'none'; }
+
+  renderChips();
+  renderBreakdown();
+  renderPaydayChecklist();
+  renderRollingIncome();
+  renderStreak();
+  generateSummary();
+}
+
+function renderBreakdown() {
+  const w = getWeek();
+  const weekIncome = w.income.reduce((s, i) => s + i.amt, 0);
+  const checking = appData.checking || 0;
+  const base = checking; // use actual checking balance
+
+  const BREAKDOWN = [
+    { emoji: '🚗', name: 'Car fund', pct: 0.286, color: '#378ADD', cat: 'Car payment' },
+    { emoji: '🛡', name: 'Emergency fund', pct: 0.143, color: '#1D9E75', cat: 'Emergency fund' },
+    { emoji: '🍽', name: 'Food & dining', pct: 0.214, color: '#7A9E7E', cat: 'Food & dining' },
+    { emoji: '⛽', name: 'Gas', pct: 0.107, color: '#C4A99A', cat: 'Gas' },
+    { emoji: '🛍', name: 'Personal', pct: 0.143, color: '#E8A0A0', cat: 'Personal' },
+    { emoji: '🤖', name: 'Claude sub', pct: 0.031, color: '#8B6F5E', cat: 'Claude subscription' },
+    { emoji: '💰', name: 'Buffer', pct: 0.076, color: '#D4B896', cat: 'Other' },
+  ];
+
+  const catSpend = {};
+  w.expenses.forEach(e => { catSpend[e.cat] = (catSpend[e.cat] || 0) + e.amt; });
+
+  document.getElementById('checkingAvail').textContent = '$' + Math.max(0, checking).toFixed(0);
+  document.getElementById('checkingSubtitle').textContent = weekIncome > 0
+    ? `This week's income: $${weekIncome.toFixed(0)} · Percentages auto-adjust`
+    : 'Log income to see your personalized split';
+
+  let totalAllocated = 0;
+  const list = document.getElementById('breakdownList');
+  if (!list) return;
+
+  list.innerHTML = BREAKDOWN.map(item => {
+    const allocated = base * item.pct;
+    const spent = catSpend[item.cat] || 0;
+    const spentPct = allocated > 0 ? Math.min(spent / allocated, 1) : 0;
+    const remaining = allocated - spent;
+    totalAllocated += allocated;
+    const barColor = spentPct > 0.9 ? '#E8A0A0' : spentPct > 0.7 ? '#D4B896' : item.color;
+    return `<div class="breakdown-row">
+      <span class="breakdown-emoji">${item.emoji}</span>
+      <span class="breakdown-name">${item.name}</span>
+      <div class="breakdown-bar-wrap">
+        <div class="breakdown-bar-bg">
+          <div class="breakdown-bar-fill" style="width:${(spentPct*100).toFixed(0)}%;background:${barColor};"></div>
+        </div>
+      </div>
+      <span class="breakdown-pct">${(item.pct*100).toFixed(0)}%</span>
+      <span class="breakdown-amt" style="color:${remaining<0?'var(--terracotta)':'var(--bark-dark)'};">$${allocated.toFixed(0)}</span>
+      <span class="breakdown-spent" style="color:${spent>0?'var(--text-mid)':'var(--text-light)'};">${spent>0?'spent $'+spent.toFixed(0):''}</span>
+    </div>`;
+  }).join('');
+
+  const unallocated = base - totalAllocated;
+  const unallocEl = document.getElementById('unallocated');
+  if (unallocEl) {
+    unallocEl.textContent = '$' + Math.max(0, unallocated).toFixed(0);
+    unallocEl.style.color = unallocated < 0 ? 'var(--terracotta)' : 'var(--bark-dark)';
+  }
+}
+
+
+// Default chips
+const DEFAULT_CHIPS = [
+  { label: 'Research job', amt: null },
+  { label: 'Chores', amt: 40 },
+  { label: 'Dog walking', amt: 20 },
+  { label: 'Other', amt: null }
+];
+
+function getChips() {
+  if (!appData.chips || appData.chips.length === 0) appData.chips = JSON.parse(JSON.stringify(DEFAULT_CHIPS));
+  return appData.chips;
+}
+
+function renderChips() {
+  const chips = getChips();
+  const container = document.getElementById('incomeChips');
+  if (!container) return;
+  container.innerHTML = chips.map((c, i) => {
+    const label = c.amt ? `${c.label} ($${c.amt})` : c.label;
+    return `<div class="income-chip" onclick="selectChip(${i})">${label}</div>`;
+  }).join('');
+
+  // Also render edit list
+  const editList = document.getElementById('chipEditList');
+  if (!editList) return;
+  editList.innerHTML = chips.map((c, i) => `
+    <div class="chip-edit-row">
+      <input type="text" value="${c.label}" onchange="updateChip(${i},'label',this.value)" placeholder="Label">
+      <input type="number" value="${c.amt||''}" onchange="updateChip(${i},'amt',this.value)" placeholder="$ (optional)" style="max-width:90px;" min="0">
+      <button class="chip-del-btn" onclick="deleteChip(${i})">✕</button>
+    </div>`).join('');
+}
+
+function selectChip(i) {
+  const chips = getChips();
+  const chip = chips[i];
+  document.querySelectorAll('.income-chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.income-chip')[i].classList.add('selected');
+  document.getElementById('incomeSource').value = chip.label;
+  if (chip.amt) document.getElementById('incomeAmt').value = chip.amt;
+  else { document.getElementById('incomeAmt').value = ''; document.getElementById('incomeAmt').focus(); }
+}
+
+function toggleChipEdit() {
+  const panel = document.getElementById('chipEditPanel');
+  panel.classList.toggle('open');
+  const btn = document.querySelector('.chips-edit-btn');
+  btn.textContent = panel.classList.contains('open') ? 'Done' : 'Edit';
+}
+
+function updateChip(i, field, val) {
+  const chips = getChips();
+  if (field === 'amt') chips[i].amt = val ? parseFloat(val) : null;
+  else chips[i][field] = val;
+  appData.chips = chips;
+  renderChips();
+}
+
+function deleteChip(i) {
+  const chips = getChips();
+  chips.splice(i, 1);
+  appData.chips = chips;
+  renderChips();
+}
+
+function addChip() {
+  const label = document.getElementById('newChipLabel').value.trim();
+  const amt = parseFloat(document.getElementById('newChipAmt').value) || null;
+  if (!label) return;
+  getChips().push({ label, amt });
+  document.getElementById('newChipLabel').value = '';
+  document.getElementById('newChipAmt').value = '';
+  renderChips();
+}
+
+function renderPaydayChecklist() {
+  const w = getWeek();
+  const weekIncome = w.income.reduce((s,i)=>s+i.amt,0);
+  const checking = appData.checking || 0;
+  const subtitle = document.getElementById('paydaySubtitle');
+  const itemsEl = document.getElementById('checklistItems');
+  if (!itemsEl) return;
+
+  if (weekIncome <= 0) {
+    subtitle.textContent = 'Log income first to activate your checklist';
+    itemsEl.innerHTML = '';
+    return;
+  }
+
+  subtitle.textContent = `Payday: $${weekIncome.toFixed(0)} received — here's what to do first`;
+
+  const steps = [
+    { key:'car', emoji:'🚗', label:'Transfer to car fund', amt: (weekIncome * 0.286).toFixed(0) },
+    { key:'emg', emoji:'🛡', label:'Transfer to emergency fund', amt: (weekIncome * 0.143).toFixed(0) },
+    { key:'food', emoji:'🍽', label:'Set aside for food', amt: (weekIncome * 0.214).toFixed(0) },
+    { key:'gas', emoji:'⛽', label:'Set aside for gas', amt: (weekIncome * 0.107).toFixed(0) },
+    { key:'personal', emoji:'🛍', label:'Personal spending money', amt: (weekIncome * 0.143).toFixed(0) },
+  ];
+
+  const checked = appData.paydayChecked || {};
+  const doneCount = steps.filter(s => checked[s.key]).length;
+
+  itemsEl.innerHTML = steps.map(s => `
+    <div class="checklist-item" onclick="toggleChecklist('${s.key}')">
+      <div class="checklist-cb ${checked[s.key] ? 'checked' : ''}"></div>
+      <span class="checklist-label ${checked[s.key] ? 'done' : ''}">${s.emoji} ${s.label}</span>
+      <span class="checklist-amt">$${s.amt}</span>
+    </div>`).join('');
+
+  const pct = (doneCount / steps.length * 100).toFixed(0);
+  document.getElementById('paydayProgressFill').style.width = pct + '%';
+  document.getElementById('paydayProgressLabel').textContent = doneCount + ' of ' + steps.length + ' done';
+  document.getElementById('paydayDoneMsg').textContent = doneCount === steps.length ? '🎉 All done!' : '';
+}
+
+function toggleChecklist(key) {
+  if (!appData.paydayChecked) appData.paydayChecked = {};
+  appData.paydayChecked[key] = !appData.paydayChecked[key];
+  renderPaydayChecklist();
+}
+
+function renderRollingIncome() {
+  const grid = document.getElementById('rollingGrid');
+  const avgEl = document.getElementById('rollingAvg');
+  const noteEl = document.getElementById('rollingNote');
+  if (!grid) return;
+
+  const weeks = [];
+  for (let i = -3; i <= 0; i++) {
+    const k = weekKey(i);
+    const w = appData.weeks[k] || { income: [], expenses: [] };
+    const inc = w.income.reduce((s,x)=>s+x.amt, 0);
+    const label = i === 0 ? 'This wk' : i === -1 ? 'Last wk' : i === -2 ? '2 wks ago' : '3 wks ago';
+    weeks.push({ label, inc, current: i === 0 });
+  }
+
+  grid.innerHTML = weeks.map(w => `
+    <div class="rolling-week ${w.current ? 'current' : ''}">
+      <div class="rolling-week-label">${w.label}</div>
+      <div class="rolling-week-amt">${w.inc > 0 ? '$'+w.inc.toFixed(0) : '—'}</div>
+    </div>`).join('');
+
+  const nonZero = weeks.filter(w => w.inc > 0);
+  if (nonZero.length === 0) {
+    avgEl.textContent = '$—';
+    noteEl.textContent = 'Log income over a few weeks to see your average';
+    return;
+  }
+
+  const avg = nonZero.reduce((s,w)=>s+w.inc, 0) / nonZero.length;
+  avgEl.textContent = '$' + avg.toFixed(0);
+
+  const thisWeek = weeks[3].inc;
+  if (thisWeek > 0 && nonZero.length > 1) {
+    const diff = thisWeek - avg;
+    noteEl.textContent = diff >= 0
+      ? `↑ $${diff.toFixed(0)} above your average this week`
+      : `↓ $${Math.abs(diff).toFixed(0)} below your average this week`;
+    noteEl.style.color = diff >= 0 ? 'var(--moss)' : 'var(--terracotta)';
+  } else {
+    noteEl.textContent = `Based on ${nonZero.length} week${nonZero.length>1?'s':''} of data`;
+    noteEl.style.color = 'var(--text-light)';
+  }
+}
+
+function checkAfford() {
+  const amt = parseFloat(document.getElementById('affordAmt').value);
+  const cat = document.getElementById('affordCat').value;
+  const result = document.getElementById('affordResult');
+  if (!amt || amt <= 0) return;
+
+  const w = getWeek();
+  const checking = appData.checking || 0;
+  const weekIncome = w.income.reduce((s,i)=>s+i.amt,0);
+  const catSpend = {};
+  w.expenses.forEach(e => { catSpend[e.cat] = (catSpend[e.cat]||0) + e.amt; });
+
+  // Find category budget
+  const BREAKDOWN = {
+    'Food & dining': 0.214, 'Gas': 0.107, 'Personal': 0.143, 'Other': 0.076
+  };
+  const pct = BREAKDOWN[cat] || 0.076;
+  const catBudget = checking * pct;
+  const catSpent = catSpend[cat] || 0;
+  const catRemaining = catBudget - catSpent;
+  const weeksToSave = catRemaining < amt ? Math.ceil((amt - catRemaining) / (weekIncome * pct || 1)) : 0;
+
+  result.className = 'afford-result show ' + (catRemaining >= amt ? 'yes' : 'no');
+
+  if (catRemaining >= amt) {
+    result.innerHTML = `✓ Yes, you can afford $${amt.toFixed(0)}!<br>
+      You have <strong>$${catRemaining.toFixed(0)}</strong> left in your ${cat} budget this week.<br>
+      After this purchase you'd have <strong>$${(catRemaining - amt).toFixed(0)}</strong> remaining.`;
+  } else {
+    result.innerHTML = `✗ Not quite — you're <strong>$${(amt - catRemaining).toFixed(0)} short</strong> in ${cat} this week.<br>
+      ${weeksToSave > 0 ? `At your current income rate, you could save up in about <strong>${weeksToSave} week${weeksToSave>1?'s':''}</strong>.` : ''}
+      <br>Consider waiting or pulling from your buffer ($${((checking * 0.076) - (catSpend['Other']||0)).toFixed(0)} left).`;
+  }
+}
+
+function renderStreak() {
+  const today = new Date();
+  const dayNames = ['S','M','T','W','T','F','S'];
+  const days = Array.from({length: 28}, (_, i) => { const d = new Date(today); d.setDate(today.getDate() - 27 + i); return d; });
+  document.getElementById('streakGrid').innerHTML = days.map(d => {
+    const isToday = d.toDateString() === today.toDateString();
+    const diffWeeks = Math.round((d - today) / (7 * 86400000));
+    const wk = getWeek(diffWeeks);
+    const hasData = wk && (wk.income.length > 0 || wk.expenses.length > 0);
+    const income = wk ? wk.income.reduce((s,i)=>s+i.amt,0) : 0;
+    const spent = wk ? wk.expenses.reduce((s,e)=>s+e.amt,0) : 0;
+    const overBudget = hasData && income > 0 && spent > income;
+    let cls = 'streak-day';
+    if (hasData) cls += overBudget ? ' over-budget' : ' on-budget';
+    if (isToday) cls += ' today';
+    return `<div class="${cls}" title="${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}">${dayNames[d.getDay()]}</div>`;
+  }).join('');
+}
+
+function generateSummary() {
+  const w = getWeek();
+  const totalIncome = w.income.reduce((s,i)=>s+i.amt,0);
+  const totalSpent = w.expenses.reduce((s,e)=>s+e.amt,0);
+  const remaining = totalIncome - totalSpent;
+  const catSpend = {};
+  w.expenses.forEach(e => { catSpend[e.cat] = (catSpend[e.cat]||0) + e.amt; });
+  const lines = [
+    `📊 Budget Summary — ${weekLabel(weekOffset)}`,``,
+    `💰 Income: $${totalIncome.toFixed(2)}`,
+    `💸 Spent:  $${totalSpent.toFixed(2)}`,
+    `${remaining>=0?'✅':'⚠️'} Remaining: ${remaining>=0?'':'-'}$${Math.abs(remaining).toFixed(2)}`,``,
+    `By category:`,
+    ...Object.entries(catSpend).map(([cat,amt])=>`  • ${cat}: $${amt.toFixed(2)} / $${WEEKLY_BUDGETS[cat]||0} budget`),``,
+    `🌱 Car fund: $${(appData.savings.car||0).toFixed(2)} of $${appData.goalCar} goal`,
+    `🛡 Emergency fund: $${(appData.savings.emergency||0).toFixed(2)} saved`,
+  ];
+  document.getElementById('summaryText').textContent = lines.join('\n');
+}
+
+function copySummary() {
+  navigator.clipboard.writeText(document.getElementById('summaryText').textContent).then(() => {
+    const fb = document.getElementById('copyFeedback');
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 2000);
+  });
+}
+
+window.onload = function() {
+  showScreen('auth');
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.onload = () => {
+    const hint = localStorage.getItem('rio_user_hint') || '';
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      hint: hint,
+      callback: onTokenReceived
+    });
+    // Try silent sign-in first; if no hint yet, show auth screen
+    if (hint) {
+      tokenClient.requestAccessToken({ prompt: '' });
+    } else {
+      showScreen('auth');
+    }
+  };
+  document.head.appendChild(script);
+};
+</script>
+</body>
+</html>
